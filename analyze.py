@@ -30,20 +30,17 @@ from scipy import stats
 # Configuration
 # ---------------------------------------------------------------------------
 
-IMPLANT_CSV      = "results_implants.csv"
-INTERIMPLANT_CSV = "results_interimplant.csv"
-OUT_IMAGE        = "images/analysis.png"
+RESULTS_XLSX = "results.xlsx"
+OUT_IMAGE    = "images/analysis.png"
 
-TECHNIQUE_COLORS = {
-    "Intraoral_Scanner":       "#1f77b4",
-    "Nexus_Photogrammetry":    "#ff7f0e",
-    "Shinning_Photogrammetry": "#2ca02c",
-}
-TECHNIQUE_LABELS = {
-    "Intraoral_Scanner":       "Intraoral Scanner",
-    "Nexus_Photogrammetry":    "Nexus Photogrammetry",
-    "Shinning_Photogrammetry": "Shinning Photogrammetry",
-}
+_PALETTE = [
+    "#1f77b4",  # blue
+    "#ff7f0e",  # orange
+    "#2ca02c",  # green
+    "#d62728",  # red
+    "#9467bd",  # purple
+    "#8c564b",  # brown
+]
 
 ALPHA = 0.05   # significance threshold
 
@@ -81,7 +78,8 @@ def interpret_p(p: float) -> str:
     return f"p = {p:.3f} (ns)"
 
 
-def pairwise_wilcoxon(df: pd.DataFrame, metric: str, techniques: list):
+def pairwise_wilcoxon(df: pd.DataFrame, metric: str, techniques: list,
+                      technique_labels: dict):
     """
     Pairwise Wilcoxon signed-rank tests with Bonferroni correction.
     Uses paired data: the same implants measured by each technique.
@@ -100,7 +98,7 @@ def pairwise_wilcoxon(df: pd.DataFrame, metric: str, techniques: list):
         vals_b = df[df["technique"] == b].sort_values(["case", "implant_id"])[metric].values
         stat, p = stats.wilcoxon(vals_a, vals_b)
         results.append({
-            "pair":   f"{TECHNIQUE_LABELS[a]}  vs  {TECHNIQUE_LABELS[b]}",
+            "pair":   f"{technique_labels[a]}  vs  {technique_labels[b]}",
             "W":      stat,
             "p":      p,
             "p_corr": min(p * n_comparisons, 1.0),
@@ -115,16 +113,23 @@ def pairwise_wilcoxon(df: pd.DataFrame, metric: str, techniques: list):
 
 def analyze():
     base = pathlib.Path(__file__).parent
-    df   = pd.read_csv(base / IMPLANT_CSV)
-    df_i = pd.read_csv(base / INTERIMPLANT_CSV)
+
+    print(f"Loading {RESULTS_XLSX}...")
+    df   = pd.read_excel(base / RESULTS_XLSX, sheet_name="Per Implant")
+    df_i = pd.read_excel(base / RESULTS_XLSX, sheet_name="Inter-Implant")
 
     techniques = sorted(df["technique"].unique())
+    technique_colors = {t: _PALETTE[i % len(_PALETTE)] for i, t in enumerate(techniques)}
+    technique_labels = {t: t for t in techniques}
+
     n_per_tech = df.groupby("technique").size().to_dict()
+    print(f"Loaded: {len(df)} implant rows, {len(df_i)} implant-pair rows, "
+          f"{df['case'].nunique()} cases, {len(techniques)} techniques.\n")
 
     section("DATASET OVERVIEW")
     print(f"  Total implant measurements : {len(df)}")
     print(f"  Cases                      : {sorted(df['case'].unique())}")
-    print(f"  Techniques                 : {[TECHNIQUE_LABELS[t] for t in techniques]}")
+    print(f"  Techniques                 : {techniques}")
     print(f"  Implants per technique     : {list(n_per_tech.values())[0]}")
 
     # -----------------------------------------------------------------------
@@ -139,7 +144,7 @@ def analyze():
         for tech in techniques:
             v = df[df["technique"] == tech][metric].values
             rows.append({
-                "Technique": TECHNIQUE_LABELS[tech],
+                "Technique": technique_labels[tech],
                 "Mean":      f"{v.mean():.3f} {unit}",
                 "Std":       f"{v.std(ddof=1):.3f}",
                 "Median":    f"{np.median(v):.3f}",
@@ -153,7 +158,7 @@ def analyze():
     for tech in techniques:
         v = df_i[df_i["technique"] == tech]["dist_error_mm"].values
         rows.append({
-            "Technique": TECHNIQUE_LABELS[tech],
+            "Technique": technique_labels[tech],
             "Mean":      f"{v.mean():.3f} mm",
             "Std":       f"{v.std(ddof=1):.3f}",
             "Median":    f"{np.median(v):.3f}",
@@ -173,7 +178,7 @@ def analyze():
             v = df[df["technique"] == tech][metric].values
             w, p = stats.shapiro(v)
             flag = "NON-NORMAL *" if p < ALPHA else "normal"
-            print(f"  {TECHNIQUE_LABELS[tech]:<30} {metric:<30} {w:.3f}  {interpret_p(p)}  -> {flag}")
+            print(f"  {technique_labels[tech]:<30} {metric:<30} {w:.3f}  {interpret_p(p)}  -> {flag}")
 
     # -----------------------------------------------------------------------
     # Outlier detection
@@ -207,7 +212,7 @@ def analyze():
             if outliers:
                 found = True
                 for lbl, val in outliers:
-                    print(f"    [!]  {TECHNIQUE_LABELS[tech]} / {metric}: {lbl} = {val:.4f} {unit}")
+                    print(f"    [!]  {technique_labels[tech]} / {metric}: {lbl} = {val:.4f} {unit}")
     if not found:
         print("  None.")
 
@@ -246,7 +251,7 @@ def analyze():
     section("PAIRWISE WILCOXON SIGNED-RANK TESTS (Bonferroni corrected)")
 
     for metric in ("angular_error_deg", "translational_offset_mm"):
-        results, bonf_alpha = pairwise_wilcoxon(df, metric, techniques)
+        results, bonf_alpha = pairwise_wilcoxon(df, metric, techniques, technique_labels)
         print(f"\n  {metric}  (Bonferroni alpha = {bonf_alpha:.4f}):")
         for r in results:
             sig = " <- SIGNIFICANT" if r["sig"] else ""
@@ -271,51 +276,32 @@ def analyze():
 
     ang_means   = {t: df[df["technique"] == t]["angular_error_deg"].mean() for t in techniques}
     trans_means = {t: df[df["technique"] == t]["translational_offset_mm"].mean() for t in techniques}
+    dist_means  = {t: df_i[df_i["technique"] == t]["dist_error_mm"].mean() for t in techniques}
     best_ang    = min(ang_means,   key=ang_means.get)
+    worst_ang   = max(ang_means,   key=ang_means.get)
     best_trans  = min(trans_means, key=trans_means.get)
+    best_dist   = min(dist_means,  key=dist_means.get)
 
     print(f"""
   1. ANGULAR ACCURACY (implant tilt)
-     Best:  {TECHNIQUE_LABELS[best_ang]} (mean {ang_means[best_ang]:.2f} deg)
-     Worst: {TECHNIQUE_LABELS['Nexus_Photogrammetry']} (mean {ang_means['Nexus_Photogrammetry']:.2f} deg)
-     Nexus angular error is ~{ang_means['Nexus_Photogrammetry']/ang_means[best_ang]:.1f}x higher than the Intraoral
-     Scanner. This was statistically significant (Friedman p=0.002,
-     Wilcoxon IOS vs Nexus corrected p<0.05).
+     Best:  {technique_labels[best_ang]} (mean {ang_means[best_ang]:.2f} deg)
+     Worst: {technique_labels[worst_ang]} (mean {ang_means[worst_ang]:.2f} deg)
+     Ratio: ~{ang_means[worst_ang]/ang_means[best_ang]:.1f}x higher error in worst vs best technique.
 
   2. TRANSLATIONAL ACCURACY (implant position)
-     Best:  {TECHNIQUE_LABELS[best_trans]} (mean {trans_means[best_trans]:.4f} mm)
-     All techniques achieve < 0.11 mm -- well within clinical tolerance.
-     Differences are small but statistically significant (Friedman p<0.001).
-
-  3. KEY FINDING: NEXUS DISSOCIATION
-     Nexus Photogrammetry has the HIGHEST angular error but the LOWEST
-     translational offset. It locates implant centres with exceptional
-     precision but poorly captures their tilt/angulation. This is
-     consistent with photogrammetry systems excelling at 3D point
-     measurement but being sensitive to cylindrical marker orientation.
-
-  4. INTER-IMPLANT DISTANCES
-     Nexus also has the smallest inter-implant distance errors (mean
-     0.023 mm vs 0.041 mm for IOS and 0.063 mm for Shinning), further
-     confirming its strength in capturing spatial relationships between
-     implants -- just not their individual angulations.
-
-  5. OUTLIERS
-     Within Nexus Photogrammetry:
-       - Case s1 implant 3: unusually LOW angular error (2.89 deg) compared
-         to the other Nexus implants (~7-9 deg). Worth investigating whether
-         this scan body had an atypical geometry.
-       - Case s2 implant 1: unusually HIGH angular error (10.31 deg).
-
-  6. NORMALITY & TEST CHOICE
-     All distributions passed Shapiro-Wilk normality tests (all p > 0.05),
-     so parametric tests would also be valid. Non-parametric tests were
-     used as a conservative choice given the small sample (n=10/technique).
-
-  7. SAMPLE SIZE CAVEAT
-     n = {list(n_per_tech.values())[0]} implants per technique across 2 cases. Results are
-     preliminary; a larger multi-patient study is needed before clinical
-     recommendations can be drawn.
+     Best:  {technique_labels[best_trans]} (mean {trans_means[best_trans]:.4f} mm)
+     All techniques:""")
+    for t in techniques:
+        print(f"       {technique_labels[t]}: {trans_means[t]:.4f} mm")
+    print(f"""
+  3. INTER-IMPLANT DISTANCES
+     Best:  {technique_labels[best_dist]} (mean {dist_means[best_dist]:.4f} mm)
+     All techniques:""")
+    for t in techniques:
+        print(f"       {technique_labels[t]}: {dist_means[t]:.4f} mm")
+    print(f"""
+  4. SAMPLE SIZE
+     n = {list(n_per_tech.values())[0]} implants per technique across {df['case'].nunique()} cases.
 """)
 
     # -----------------------------------------------------------------------
@@ -323,8 +309,9 @@ def analyze():
     # -----------------------------------------------------------------------
     section("GENERATING ANALYSIS FIGURE")
 
-    colors      = [TECHNIQUE_COLORS[t] for t in techniques]
-    short_labels = ["IOS", "Nexus", "Shinning"]
+    colors       = [technique_colors[t] for t in techniques]
+    short_labels = techniques
+    n_tech       = len(techniques)
 
     fig = plt.figure(figsize=(18, 10))
     fig.suptitle(
@@ -343,7 +330,7 @@ def analyze():
         ax1.scatter(np.random.normal(i, 0.06, len(vals)), vals,
                     color=color, zorder=5, s=35, alpha=0.9,
                     edgecolors="white", linewidths=0.5)
-    ax1.set_xticks([1, 2, 3]); ax1.set_xticklabels(short_labels, fontsize=9)
+    ax1.set_xticks(range(1, n_tech + 1)); ax1.set_xticklabels(short_labels, fontsize=9)
     ax1.set_ylabel("Degrees", fontsize=9)
     ax1.set_title("Angular Error vs. Gold Standard", fontsize=10, fontweight="bold")
     ax1.yaxis.grid(True, linestyle="--", alpha=0.4); ax1.set_axisbelow(True)
@@ -359,7 +346,7 @@ def analyze():
         ax2.scatter(np.random.normal(i, 0.06, len(vals)), vals,
                     color=color, zorder=5, s=35, alpha=0.9,
                     edgecolors="white", linewidths=0.5)
-    ax2.set_xticks([1, 2, 3]); ax2.set_xticklabels(short_labels, fontsize=9)
+    ax2.set_xticks(range(1, n_tech + 1)); ax2.set_xticklabels(short_labels, fontsize=9)
     ax2.set_ylabel("mm", fontsize=9)
     ax2.set_title("Translational Offset vs. Gold Standard", fontsize=10, fontweight="bold")
     ax2.yaxis.grid(True, linestyle="--", alpha=0.4); ax2.set_axisbelow(True)
@@ -375,7 +362,7 @@ def analyze():
         ax3.scatter(np.random.normal(i, 0.06, len(vals)), vals,
                     color=color, zorder=5, s=20, alpha=0.9,
                     edgecolors="white", linewidths=0.5)
-    ax3.set_xticks([1, 2, 3]); ax3.set_xticklabels(short_labels, fontsize=9)
+    ax3.set_xticks(range(1, n_tech + 1)); ax3.set_xticklabels(short_labels, fontsize=9)
     ax3.set_ylabel("mm", fontsize=9)
     ax3.set_title("Inter-implant Distance Error", fontsize=10, fontweight="bold")
     ax3.yaxis.grid(True, linestyle="--", alpha=0.4); ax3.set_axisbelow(True)
@@ -385,7 +372,7 @@ def analyze():
     for tech, color in zip(techniques, colors):
         sub = df[df["technique"] == tech]
         ax4.scatter(sub["angular_error_deg"], sub["translational_offset_mm"],
-                    color=color, label=TECHNIQUE_LABELS[tech],
+                    color=color, label=technique_labels[tech],
                     s=60, alpha=0.85, edgecolors="white", linewidths=0.5)
     ax4.set_xlabel("Angular Error (deg)", fontsize=9)
     ax4.set_ylabel("Translational Offset (mm)", fontsize=9)
@@ -402,13 +389,13 @@ def analyze():
     ax5 = fig.add_subplot(2, 3, 5)
     cases  = sorted(df["case"].unique())
     x      = np.arange(len(cases))
-    bar_w  = 0.25
+    bar_w  = 0.8 / n_tech
     for i, (tech, color) in enumerate(zip(techniques, colors)):
         means = [df[(df["technique"] == tech) & (df["case"] == c)]["angular_error_deg"].mean()
                  for c in cases]
         ax5.bar(x + i * bar_w, means, bar_w, color=color,
-                label=TECHNIQUE_LABELS[tech], alpha=0.8)
-    ax5.set_xticks(x + bar_w); ax5.set_xticklabels([f"Case {c}" for c in cases], fontsize=9)
+                label=technique_labels[tech], alpha=0.8)
+    ax5.set_xticks(x + bar_w * (n_tech - 1) / 2); ax5.set_xticklabels([f"Case {c}" for c in cases], fontsize=9)
     ax5.set_ylabel("Mean Angular Error (deg)", fontsize=9)
     ax5.set_title("Angular Error by Case", fontsize=10, fontweight="bold")
     ax5.legend(fontsize=7); ax5.yaxis.grid(True, linestyle="--", alpha=0.4); ax5.set_axisbelow(True)
@@ -419,8 +406,8 @@ def analyze():
         means = [df[(df["technique"] == tech) & (df["case"] == c)]["translational_offset_mm"].mean()
                  for c in cases]
         ax6.bar(x + i * bar_w, means, bar_w, color=color,
-                label=TECHNIQUE_LABELS[tech], alpha=0.8)
-    ax6.set_xticks(x + bar_w); ax6.set_xticklabels([f"Case {c}" for c in cases], fontsize=9)
+                label=technique_labels[tech], alpha=0.8)
+    ax6.set_xticks(x + bar_w * (n_tech - 1) / 2); ax6.set_xticklabels([f"Case {c}" for c in cases], fontsize=9)
     ax6.set_ylabel("Mean Translational Offset (mm)", fontsize=9)
     ax6.set_title("Translational Offset by Case", fontsize=10, fontweight="bold")
     ax6.legend(fontsize=7); ax6.yaxis.grid(True, linestyle="--", alpha=0.4); ax6.set_axisbelow(True)
@@ -431,6 +418,7 @@ def analyze():
     plt.savefig(out, dpi=150, bbox_inches="tight")
     plt.close(fig)
     print(f"  Saved: {out}")
+    print("\nDone.")
 
 
 if __name__ == "__main__":

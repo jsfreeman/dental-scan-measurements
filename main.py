@@ -27,7 +27,7 @@ import yaml
 
 from src.loader import load_mesh
 from src.cylinder_fit import extract_cylinders
-from src.alignment import align_cylinders
+from src.alignment import align_cylinders, _RMSE_WARNING_THRESHOLD_MM
 from src.metrics import angular_error, translational_offset, interimplant_distance_errors
 from src.reporter import write_results
 
@@ -134,6 +134,10 @@ def process_case(case: dict, base_dir: pathlib.Path):
         # Align the technique cylinders to the gold-standard coordinate frame
         aligned_tech, R, t, perm, rmse = align_cylinders(gold_cyls, tech_cyls_original)
         print(f"    Alignment RMSE (centres): {rmse:.4f} mm")
+        if rmse > _RMSE_WARNING_THRESHOLD_MM:
+            print(f"    *** WARNING: RMSE {rmse:.3f} mm exceeds {_RMSE_WARNING_THRESHOLD_MM} mm "
+                  f"for case '{name}' / technique '{technique_name}'. "
+                  f"Check n_implants and file pairing. ***")
 
         # Per-implant error metrics
         for i, (gold_c, tech_c) in enumerate(zip(gold_cyls, aligned_tech)):
@@ -163,6 +167,15 @@ def process_case(case: dict, base_dir: pathlib.Path):
                 "gold_center_y":  round(float(gold_c.center[1]), 4),
                 "gold_center_z":  round(float(gold_c.center[2]), 4),
                 "gold_radius_mm": round(float(gold_c.radius), 4),
+                # Fit quality — how well the cylinder model matched the mesh cluster.
+                # fit_rmse_mm:      mean distance of surface points from cylinder wall (mm)
+                #                   < 0.1 mm = excellent, > 0.5 mm = poor
+                # elongation_ratio: PCA eigenvalue ratio λ1/(λ2+λ3)
+                #                   > 5 = strongly cylindrical (confident axis), < 2 = weak
+                "tech_fit_rmse_mm":      round(float(tech_cyls_original[perm[i]].fit_rmse_mm), 4),
+                "tech_elongation_ratio": round(float(tech_cyls_original[perm[i]].elongation_ratio), 2),
+                "gold_fit_rmse_mm":      round(float(gold_c.fit_rmse_mm), 4),
+                "gold_elongation_ratio": round(float(gold_c.elongation_ratio), 2),
             })
 
         # Inter-implant distance errors (uses original tech centres — alignment-invariant)
@@ -212,7 +225,11 @@ def main() -> None:
     all_implant_rows      = []
     all_interimplant_rows = []
 
-    for case in config["cases"]:
+    n_cases = len(config["cases"])
+    print(f"\nProcessing {n_cases} case(s)...")
+
+    for i, case in enumerate(config["cases"], 1):
+        print(f"\n[Case {i}/{n_cases}]", end="")
         try:
             imp, interp = process_case(case, base_dir)
         except Exception as exc:
@@ -236,6 +253,9 @@ def main() -> None:
     except (ValueError, OSError) as exc:
         print(f"ERROR writing results: {exc}", file=sys.stderr)
         sys.exit(1)
+
+    n_implants = len(all_implant_rows)
+    print(f"\nDone. {n_cases} cases, {n_implants} implant measurements.")
 
 
 if __name__ == "__main__":

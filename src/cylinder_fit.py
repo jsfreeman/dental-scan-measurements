@@ -24,11 +24,21 @@ This is deterministic and fast, and works well when the cluster is dominated by
 the cylindrical scan body surface.
 """
 
+import warnings
 from dataclasses import dataclass
 
 import numpy as np
 import trimesh
 from scipy.cluster.vq import kmeans2
+
+# trimesh's mesh.split() triggers a harmless NumPy int64 cast warning on some
+# mesh topologies — suppress it so it doesn't clutter pipeline output.
+warnings.filterwarnings(
+    "ignore",
+    message="invalid value encountered in cast",
+    category=RuntimeWarning,
+    module="trimesh",
+)
 
 # Minimum number of points required to attempt a cylinder fit.
 # Below this the SVD and circle fit are unreliable.
@@ -40,6 +50,17 @@ class Cylinder:
     center: np.ndarray  # 3-D point on the cylinder axis (mm)
     axis: np.ndarray    # unit direction vector along the cylinder axis
     radius: float       # cylinder radius (mm)
+
+    # Fit quality metrics — populated by fit_cylinder_to_points, default 0 for
+    # cylinders created during alignment (where quality is not re-evaluated).
+    fit_rmse_mm: float = 0.0
+    # Mean distance of surface points from the fitted cylinder wall (mm).
+    # Lower is better.  < 0.1 mm = excellent, > 0.5 mm = poor.
+
+    elongation_ratio: float = 0.0
+    # PCA eigenvalue ratio: λ₁ / (λ₂ + λ₃).  Measures how cylindrical the
+    # cluster shape is.  Higher = more elongated = axis direction more reliable.
+    # > 5 = strongly cylindrical, 2–5 = moderate, < 2 = weakly cylindrical.
 
 
 # ---------------------------------------------------------------------------
@@ -147,13 +168,21 @@ def fit_cylinder_to_points(points: np.ndarray) -> Cylinder:
 
     # SVD of the centred matrix: rows of Vt are the principal components in
     # descending order of explained variance.  The first row is the cylinder axis.
-    _, _, Vt = np.linalg.svd(centered, full_matrices=False)
+    # Singular values s are retained for the elongation confidence metric.
+    _, singular_values, Vt = np.linalg.svd(centered, full_matrices=False)
     axis = Vt[0]  # unit vector (SVD guarantees this)
 
+    # Elongation ratio: λ₁ / (λ₂ + λ₃) where λᵢ = sᵢ².
+    # A high ratio means the cluster is strongly elongated along one axis
+    # (clearly cylindrical), giving a confident axis direction estimate.
+    eigenvalues = singular_values ** 2
+    denom = eigenvalues[1] + eigenvalues[2]
+    elongation_ratio = float(eigenvalues[0] / denom) if denom > 0 else 0.0
+
     # Decompose each centred point into components parallel and perpendicular to axis
-    projections = centered @ axis          # scalar distance along axis for each point
-    parallel    = np.outer(projections, axis)
-    perpendicular = centered - parallel    # lies in the plane perpendicular to axis
+    projections   = centered @ axis          # scalar distance along axis for each point
+    parallel      = np.outer(projections, axis)
+    perpendicular = centered - parallel      # lies in the plane perpendicular to axis
 
     # Express the perpendicular components in a 2-D coordinate system
     e1, e2 = _orthogonal_basis(axis)
@@ -164,14 +193,21 @@ def fit_cylinder_to_points(points: np.ndarray) -> Cylinder:
     if radius == 0.0:
         import warnings
         warnings.warn(
-            "Circle fit produced radius ≈ 0 — cluster may be degenerate. "
+            "Circle fit produced radius ~0 — cluster may be degenerate. "
             "Check that n_implants matches the actual number of scan bodies."
         )
 
     # The 3-D cylinder centre is the centroid shifted by the 2-D circle offset
     center = centroid + cx_2d * e1 + cy_2d * e2
 
-    return Cylinder(center=center, axis=axis, radius=radius)
+    # Surface RMSE: mean distance of each point from the fitted cylinder wall.
+    # For each point: distance_from_axis = ||perpendicular component||
+    # residual = |distance_from_axis - radius|
+    dist_from_axis = np.linalg.norm(perpendicular, axis=1)
+    fit_rmse_mm = float(np.mean(np.abs(dist_from_axis - radius)))
+
+    return Cylinder(center=center, axis=axis, radius=radius,
+                    fit_rmse_mm=fit_rmse_mm, elongation_ratio=elongation_ratio)
 
 
 # ---------------------------------------------------------------------------

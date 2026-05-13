@@ -16,9 +16,10 @@ import pathlib
 import sys
 
 import matplotlib
-matplotlib.use("Agg")          # write PNG files without needing a display
+matplotlib.use("Agg")          # write files without needing a display
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
+from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 import yaml
 
@@ -32,14 +33,22 @@ from src.metrics import angular_error, translational_offset
 # Visual style
 # ---------------------------------------------------------------------------
 
-# One colour per technique, plus black for the gold standard
-COLORS = {
-    "Gold_Standard":           "#111111",
-    "Intraoral_Scanner":       "#1f77b4",   # blue
-    "Nexus_Photogrammetry":    "#ff7f0e",   # orange
-    "Shinning_Photogrammetry": "#2ca02c",   # green
-}
-DEFAULT_COLOR = "#999999"   # fallback for unrecognised technique names
+# Gold standard colour (fixed) and a rotating palette for techniques
+_GOLD_COLOR = "#111111"
+_COLOR_PALETTE = [
+    "#1f77b4",  # blue
+    "#ff7f0e",  # orange
+    "#2ca02c",  # green
+    "#d62728",  # red
+    "#9467bd",  # purple
+    "#8c564b",  # brown
+]
+
+
+def _build_color_map(technique_names: list[str]) -> dict[str, str]:
+    """Assign a colour from the palette to each technique name, in sorted order."""
+    return {name: _COLOR_PALETTE[i % len(_COLOR_PALETTE)]
+            for i, name in enumerate(sorted(technique_names))}
 
 # Visual parameters for cylinder drawing
 CYLINDER_DRAW_HEIGHT_MM = 5.0   # approximate scan-body height used for drawing only
@@ -94,32 +103,32 @@ def _draw_cylinder(ax, cyl: Cylinder, color: str, label: str = None):
     ax.scatter(*C, color=color, s=60, zorder=10, depthshade=False)
 
 
-def _make_legend_patches(technique_names: list[str]) -> list[mpatches.Patch]:
+def _make_legend_patches(technique_names: list[str],
+                         color_map: dict[str, str]) -> list[mpatches.Patch]:
     """Build coloured legend patches for the 3-D plot."""
     patches = [
-        mpatches.Patch(color=COLORS["Gold_Standard"], label="Gold Standard (Desktop)")
+        mpatches.Patch(color=_GOLD_COLOR, label="Gold Standard (Desktop)")
     ]
     for name in technique_names:
-        color = COLORS.get(name, DEFAULT_COLOR)
-        patches.append(mpatches.Patch(color=color, label=name.replace("_", " ")))
+        patches.append(mpatches.Patch(color=color_map[name], label=name.replace("_", " ")))
     return patches
 
 
 def _plot_3d(ax, gold_cyls: list[Cylinder],
-             aligned_by_technique: dict[str, list[Cylinder]]):
+             aligned_by_technique: dict[str, list[Cylinder]],
+             color_map: dict[str, str]):
     """
     Plot all cylinders (gold + each technique) on a shared 3-D axis.
     Cylinders are already in the aligned (gold) coordinate frame.
     """
     # Draw gold-standard cylinders first so they are visually prominent
     for cyl in gold_cyls:
-        _draw_cylinder(ax, cyl, color=COLORS["Gold_Standard"])
+        _draw_cylinder(ax, cyl, color=_GOLD_COLOR)
 
     # Draw each technique's cylinders
     for tech_name, cyls in aligned_by_technique.items():
-        color = COLORS.get(tech_name, DEFAULT_COLOR)
         for cyl in cyls:
-            _draw_cylinder(ax, cyl, color=color)
+            _draw_cylinder(ax, cyl, color=color_map[tech_name])
 
     # Axis labels and equal aspect ratio
     ax.set_xlabel("X (mm)", fontsize=8)
@@ -144,7 +153,8 @@ def _plot_3d(ax, gold_cyls: list[Cylinder],
 def _plot_error_bars(ax_ang, ax_trans,
                      gold_cyls: list[Cylinder],
                      aligned_by_technique: dict[str, list[Cylinder]],
-                     n: int):
+                     n: int,
+                     color_map: dict[str, str]):
     """
     Plot per-implant angular error and translational offset as grouped bar charts.
     """
@@ -156,7 +166,7 @@ def _plot_error_bars(ax_ang, ax_trans,
 
     for i, tech_name in enumerate(technique_names):
         cyls  = aligned_by_technique[tech_name]
-        color = COLORS.get(tech_name, DEFAULT_COLOR)
+        color = color_map[tech_name]
 
         ang_errs   = [angular_error(gold_cyls[j].axis, cyls[j].axis) for j in range(n)]
         trans_errs = [translational_offset(gold_cyls[j].center, cyls[j].center) for j in range(n)]
@@ -190,16 +200,19 @@ def _plot_error_bars(ax_ang, ax_trans,
 # Per-case visualisation
 # ---------------------------------------------------------------------------
 
-def visualise_case(case: dict, base_dir: pathlib.Path, outdir: pathlib.Path):
+def visualise_case(case: dict, base_dir: pathlib.Path, pdf: PdfPages,
+                   color_map: dict[str, str],
+                   case_num: int = 0, n_cases: int = 0):
     """
-    Run the pipeline for one case and save a composite PNG.
+    Run the pipeline for one case and add a page to the PDF.
 
     Layout:
       [3-D cylinder view] | [angular error chart] | [translational offset chart]
     """
-    name = case["name"]
-    n    = case["n_implants"]
-    print(f"\nVisualising case: {name} ({n} implants)...")
+    name   = case["name"]
+    n      = case["n_implants"]
+    prefix = f"[Case {case_num}/{n_cases}] " if case_num else ""
+    print(f"\n{prefix}{name}  ({n} implants)")
 
     # Load and process gold standard
     gold_mesh = load_mesh(str(base_dir / case["desktop_scanner"]))
@@ -226,24 +239,21 @@ def visualise_case(case: dict, base_dir: pathlib.Path, outdir: pathlib.Path):
     # 3-D plot occupies the left third
     ax3d = fig.add_subplot(1, 3, 1, projection="3d")
     ax3d.set_title("3-D cylinder view (aligned frame)", fontsize=10, fontweight="bold")
-    _plot_3d(ax3d, gold_cyls, aligned_by_technique)
+    _plot_3d(ax3d, gold_cyls, aligned_by_technique, color_map)
     ax3d.legend(
-        handles=_make_legend_patches(list(aligned_by_technique.keys())),
+        handles=_make_legend_patches(list(aligned_by_technique.keys()), color_map),
         fontsize=7, loc="upper left",
     )
 
     # Error charts occupy centre and right
     ax_ang   = fig.add_subplot(1, 3, 2)
     ax_trans = fig.add_subplot(1, 3, 3)
-    _plot_error_bars(ax_ang, ax_trans, gold_cyls, aligned_by_technique, n)
+    _plot_error_bars(ax_ang, ax_trans, gold_cyls, aligned_by_technique, n, color_map)
 
     plt.tight_layout()
-
-    out_path = outdir / f"case_{name}.png"
-    plt.savefig(out_path, dpi=150, bbox_inches="tight")
+    pdf.savefig(fig, bbox_inches="tight")
     plt.close(fig)
-    print(f"  Saved: {out_path}")
-    return out_path
+    print(f"  Added to PDF.")
 
 
 # ---------------------------------------------------------------------------
@@ -276,16 +286,26 @@ def main():
     with open(config_path) as f:
         config = yaml.safe_load(f)
 
-    saved = []
-    for case in config["cases"]:
-        try:
-            path = visualise_case(case, base_dir, outdir)
-            saved.append(path)
-        except Exception as exc:
-            print(f"ERROR on case '{case.get('name', '?')}': {exc}", file=sys.stderr)
-            sys.exit(1)
+    n_cases  = len(config["cases"])
+    pdf_path = outdir / "case_charts.pdf"
+    print(f"Generating {n_cases} case chart(s) -> {pdf_path}")
 
-    print(f"\nDone. {len(saved)} image(s) written to {outdir}/")
+    all_techniques = sorted({
+        tech_name
+        for case in config["cases"]
+        for tech_name in case["techniques"]
+    })
+    color_map = _build_color_map(all_techniques)
+
+    with PdfPages(pdf_path) as pdf:
+        for i, case in enumerate(config["cases"], 1):
+            try:
+                visualise_case(case, base_dir, pdf, color_map, case_num=i, n_cases=n_cases)
+            except Exception as exc:
+                print(f"ERROR on case '{case.get('name', '?')}': {exc}", file=sys.stderr)
+                sys.exit(1)
+
+    print(f"\nDone. {n_cases} page(s) written to {pdf_path}")
 
 
 if __name__ == "__main__":

@@ -3,3 +3,13 @@ __pycache__/
 *.pyo
 .venv/
 *.egg-info/
+
+# Generated outputs (reproduced by run_all.py)
+results.xlsx
+results_implants.csv
+results_interimplant.csv
+images/
+tmp_output.txt
+
+# Notes
+notes/

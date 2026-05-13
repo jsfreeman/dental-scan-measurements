@@ -32,7 +32,6 @@ Each permutation requires one SVD (3×3 matrix) — the full search takes < 1 ms
 even for N=6, so brute force is appropriate here.
 """
 
-import warnings
 from itertools import permutations
 
 import numpy as np
@@ -149,15 +148,6 @@ def align_cylinders(gold: list[Cylinder], tech: list[Cylinder]):
     if best_rmse == np.inf:
         raise RuntimeError("Alignment search produced no valid result.")
 
-    # Warn if the residual error is suspiciously large — may indicate a mismatch
-    # between the number of implants specified and those present in the scan.
-    if best_rmse > _RMSE_WARNING_THRESHOLD_MM:
-        warnings.warn(
-            f"Alignment RMSE = {best_rmse:.3f} mm exceeds "
-            f"{_RMSE_WARNING_THRESHOLD_MM} mm.  The files may not represent the "
-            "same case, or n_implants may be incorrect.",
-            stacklevel=2,
-        )
 
     # --- Apply the winning transform to axes and centres ---
     aligned_tech = []

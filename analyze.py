@@ -330,7 +330,7 @@ def analyze():
         ax1.scatter(np.random.normal(i, 0.06, len(vals)), vals,
                     color=color, zorder=5, s=35, alpha=0.9,
                     edgecolors="white", linewidths=0.5)
-        ax1.text(i + 0.28, np.median(vals), f"{np.median(vals):.2f}°",
+        ax1.text(i + 0.28, np.mean(vals), f"{np.mean(vals):.2f}°",
                  fontsize=7, va="center", fontweight="bold", color=color)
     ax1.set_xticks(range(1, n_tech + 1)); ax1.set_xticklabels(short_labels, fontsize=9)
     ax1.set_ylabel("Degrees", fontsize=9)
@@ -348,7 +348,7 @@ def analyze():
         ax2.scatter(np.random.normal(i, 0.06, len(vals)), vals,
                     color=color, zorder=5, s=35, alpha=0.9,
                     edgecolors="white", linewidths=0.5)
-        ax2.text(i + 0.28, np.median(vals), f"{np.median(vals):.3f}",
+        ax2.text(i + 0.28, np.mean(vals), f"{np.mean(vals):.3f}",
                  fontsize=7, va="center", fontweight="bold", color=color)
     ax2.set_xticks(range(1, n_tech + 1)); ax2.set_xticklabels(short_labels, fontsize=9)
     ax2.set_ylabel("mm", fontsize=9)
@@ -366,7 +366,7 @@ def analyze():
         ax3.scatter(np.random.normal(i, 0.06, len(vals)), vals,
                     color=color, zorder=5, s=20, alpha=0.9,
                     edgecolors="white", linewidths=0.5)
-        ax3.text(i + 0.28, np.median(vals), f"{np.median(vals):.3f}",
+        ax3.text(i + 0.28, np.mean(vals), f"{np.mean(vals):.3f}",
                  fontsize=7, va="center", fontweight="bold", color=color)
     ax3.set_xticks(range(1, n_tech + 1)); ax3.set_xticklabels(short_labels, fontsize=9)
     ax3.set_ylabel("mm", fontsize=9)

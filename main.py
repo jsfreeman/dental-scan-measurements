@@ -91,7 +91,7 @@ def _check_files_exist(config: dict, base_dir: pathlib.Path) -> None:
         )
 
 
-def process_case(case: dict, base_dir: pathlib.Path):
+def process_case(case: dict, base_dir: pathlib.Path, segmentation: str = "components"):
     """
     Process one case: extract gold-standard cylinders, then compare each technique.
 
@@ -118,7 +118,7 @@ def process_case(case: dict, base_dir: pathlib.Path):
     gold_path = base_dir / case["desktop_scanner"]
     print(f"\n[Gold standard]  {gold_path.name}")
     gold_mesh = load_mesh(str(gold_path))
-    gold_cyls = extract_cylinders(gold_mesh, n)
+    gold_cyls = extract_cylinders(gold_mesh, n, strategy=segmentation)
 
     implant_rows     = []
     interimplant_rows = []
@@ -129,7 +129,7 @@ def process_case(case: dict, base_dir: pathlib.Path):
         print(f"\n[{technique_name}]  {tech_path.name}")
 
         tech_mesh         = load_mesh(str(tech_path))
-        tech_cyls_original = extract_cylinders(tech_mesh, n)
+        tech_cyls_original = extract_cylinders(tech_mesh, n, strategy=segmentation)
 
         # Align the technique cylinders to the gold-standard coordinate frame
         aligned_tech, R, t, perm, rmse = align_cylinders(gold_cyls, tech_cyls_original)
@@ -198,6 +198,17 @@ def main() -> None:
         metavar="FILE",
         help="Path to the YAML configuration file.",
     )
+    parser.add_argument(
+        "--segmentation",
+        choices=["components", "kmeans"],
+        default="components",
+        help=(
+            "Cylinder segmentation strategy. "
+            "'components' (default): split mesh on connected-component boundaries, "
+            "falling back to K-means if fewer than N bodies are found. "
+            "'kmeans': always use K-means spatial clustering."
+        ),
+    )
     args = parser.parse_args()
 
     # Resolve the config path and derive the project root from it
@@ -231,7 +242,7 @@ def main() -> None:
     for i, case in enumerate(config["cases"], 1):
         print(f"\n[Case {i}/{n_cases}]", end="")
         try:
-            imp, interp = process_case(case, base_dir)
+            imp, interp = process_case(case, base_dir, segmentation=args.segmentation)
         except Exception as exc:
             print(
                 f"\nERROR processing case '{case.get('name', '?')}': {exc}",

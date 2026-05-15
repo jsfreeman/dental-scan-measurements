@@ -7,12 +7,18 @@ A tool for measuring and comparing the accuracy of dental implant scanning techn
 ## Quick Start
 
 ```
-python main.py --config config/trial.yaml      # measure accuracy → CSV files
-python visualize.py --config config/trial.yaml # generate 3-D and error charts per case
-python analyze.py                              # run statistics and generate analysis chart
+python run_all.py --config config/trial.yaml
 ```
 
-Results appear in the project folder as `results_implants.csv`, `results_interimplant.csv`, and `images/`.
+This runs the full pipeline in one command and produces `results.xlsx` and charts in `images/`.
+
+Or run the steps individually:
+
+```
+python main.py --config config/trial.yaml       # measure accuracy → results.xlsx
+python visualize.py --config config/trial.yaml  # per-case 3-D + bar charts → images/case_charts.pdf
+python analyze.py                               # statistics + box plots → images/analysis.png
+```
 
 ---
 
@@ -42,11 +48,7 @@ data/
     nexus_photogrammetry.ply
     shinning_photogrammetry.stl
   patient_002/
-    desktop_scanner.stl
-    intraoral_scanner.stl
-    nexus_photogrammetry.ply
-    shinning_photogrammetry.stl
-  ...
+    ...
 ```
 
 **Supported file formats:** STL (the most common format from dental CAD software) and PLY.  Both binary and ASCII STL files work.
@@ -82,14 +84,6 @@ cases:
       Intraoral_Scanner:          "data/patient_002/intraoral_scanner.stl"
       Nexus_Photogrammetry:       "data/patient_002/nexus_photogrammetry.ply"
       Shinning_Photogrammetry:    "data/patient_002/shinning_photogrammetry.stl"
-
-  - name: "Patient 003"
-    n_implants: 3
-    desktop_scanner: "data/patient_003/desktop_scanner.stl"
-    techniques:
-      Intraoral_Scanner:          "data/patient_003/intraoral_scanner.stl"
-      Nexus_Photogrammetry:       "data/patient_003/nexus_photogrammetry.ply"
-      Shinning_Photogrammetry:    "data/patient_003/shinning_photogrammetry.stl"
 ```
 
 ### Important notes
@@ -107,16 +101,24 @@ cases:
 python main.py --config config/my_study.yaml
 ```
 
-The tool will print progress as it processes each case and technique.  When it finishes you will have two spreadsheet files:
+The tool will print progress as it processes each case and technique.  When it finishes you will have a spreadsheet file `results.xlsx` with three sheets:
 
-| File | Contents |
+| Sheet | Contents |
 |---|---|
-| `results_implants.csv` | One row per implant per technique per case.  Contains angular error (degrees), translational offset (mm), and the raw cylinder parameters for both the technique and the gold standard. |
-| `results_interimplant.csv` | One row per pair of implants per technique per case.  Contains the distance between each pair of implants in the gold standard and the technique, and the difference between them. |
+| **Per Implant** | One row per implant per technique per case.  Contains angular error (degrees), translational offset (mm), and the raw cylinder parameters for both the technique and the gold standard. |
+| **Inter-Implant** | One row per pair of implants per technique per case.  Contains the distance between each pair of implants in the gold standard and the technique, and the difference between them. |
+| **Summary** | Descriptive statistics per technique. |
 
-These files can be opened directly in Excel or any spreadsheet program.
+This file can be opened directly in Excel or any spreadsheet program.
 
-**Tip:** If you want separate output files for different studies, change `output_csv` and `output_interimplant_csv` in your config file.
+### Options
+
+| Flag | Values | Default | Description |
+|---|---|---|---|
+| `--config` | path | *(required)* | Path to the YAML configuration file. |
+| `--segmentation` | `components`, `kmeans` | `components` | How scan bodies are separated within each mesh file. `components` splits on mesh connectivity and falls back to K-means if needed. `kmeans` always uses spatial clustering — useful when meshes are fused into a single body. |
+
+Run `python main.py --help` for a full usage summary.
 
 ---
 
@@ -126,16 +128,13 @@ These files can be opened directly in Excel or any spreadsheet program.
 python visualize.py --config config/my_study.yaml
 ```
 
-This generates one image per case inside the `images/` folder.  Each image shows:
+This generates a multi-page PDF (`images/case_charts.pdf`) with one page per case.  Each page shows:
 
 - **Left panel:** A 3-D view of all the fitted cylinders for that case, colour-coded by technique.  This lets you verify that the tool found the right implants and that the alignment looks correct.
 - **Centre panel:** A bar chart of angular error per implant (how accurately each technique captured the tilt of each implant).
 - **Right panel:** A bar chart of translational offset per implant (how accurately each technique captured the position of each implant).
 
-To open an image on Windows, run:
-```
-start images\case_Patient_001.png
-```
+Accepts the same `--segmentation` flag as `main.py`.  Run `python visualize.py --help` for all options.
 
 ---
 
@@ -145,15 +144,12 @@ start images\case_Patient_001.png
 python analyze.py
 ```
 
-This reads `results_implants.csv` and `results_interimplant.csv` (whichever are currently in the project folder) and:
+This reads `results.xlsx` (produced by Step 4) and:
 
 - Prints a full statistical report to the terminal, including descriptive statistics, outlier detection, a Friedman repeated-measures test, and pairwise Wilcoxon tests with Bonferroni correction.
 - Saves a composite chart to `images/analysis.png` with box plots, individual data points, a scatter plot of angular vs translational error, and per-case breakdowns.
 
-Open the analysis chart on Windows:
-```
-start images\analysis.png
-```
+Run `python analyze.py --help` for a usage summary.
 
 ---
 
@@ -178,29 +174,14 @@ The `n_implants` value in your config doesn't match the number of scan bodies in
 **"Alignment RMSE exceeds 1 mm" warning**
 The two scans may not represent the same patient, or `n_implants` may be wrong.  Check that the correct files are listed in the config.
 
+**"Alignment ambiguity" warning**
+More than one way of matching the technique implants to the gold-standard implants gives a good alignment score.  This can happen when implants are placed in a symmetric pattern.  The per-implant angular and translational errors for this case may be unreliable; the inter-implant distance errors (which do not depend on alignment) are still valid.
+
 **The tool is slow on large PLY files**
 Photogrammetry files can be very large (100,000+ triangles).  This is normal — the tool samples a manageable point cloud from the surface.  Processing typically takes 10–30 seconds per file.
 
----
-
-## Trial data and initial conclusions
-
-The `trial/` folder contains two cases used during development:
-
-| Case | Implants | Techniques |
-|---|---|---|
-| s1 (86846A) | 6 | Desktop Scanner, Intraoral Scanner, Nexus PLY, Shinning STL |
-| s2 (104663A) | 4 | Desktop Scanner, Intraoral Scanner, Nexus PLY, Shinning STL |
-
-Results from these two cases (n = 10 implants per technique):
-
-| Technique | Mean angular error | Mean translational offset | Mean inter-implant distance error |
-|---|---|---|---|
-| Intraoral Scanner | 2.2° | 0.053 mm | 0.041 mm |
-| Shinning Photogrammetry | 2.5° | 0.076 mm | 0.063 mm |
-| Nexus Photogrammetry | 7.3° | **0.032 mm** | **0.023 mm** |
-
-**Key finding:** Nexus Photogrammetry captures implant *positions* most accurately (lowest translational and inter-implant distance errors) but captures implant *angulation* least accurately (angular error ~3x higher than the other techniques, p = 0.002).  The Intraoral Scanner provides the best overall balance.  These are preliminary results based on two cases only.
+**Cylinder extraction looks wrong for fused meshes**
+Some scanners export all scan bodies as a single connected mesh rather than separate components.  Try `--segmentation kmeans` to force spatial clustering instead of component splitting.
 
 ---
 
@@ -209,19 +190,19 @@ Results from these two cases (n = 10 implants per technique):
 ```
 dental-scan-measurements/
 ├── config/
-│   └── trial.yaml              # Example config for the trial dataset
+│   └── trial.yaml                  # Config for the 27-case trial dataset
 ├── src/
-│   ├── loader.py               # Loads STL and PLY files
-│   ├── cylinder_fit.py         # Finds and fits cylinders to each scan body
-│   ├── alignment.py            # Aligns cylinder sets between techniques
-│   ├── metrics.py              # Calculates error measurements
-│   └── reporter.py             # Writes results to CSV
-├── checks/                     # One-time environment verification scripts
-├── trial/                      # Trial scan files (2 cases)
-├── papers/                     # Reference literature
-├── images/                     # Generated charts (created when you run the scripts)
-├── main.py                     # Step 4: run measurements
-├── visualize.py                # Step 5: generate per-case charts
-├── analyze.py                  # Step 6: statistical analysis
-└── requirements.txt            # Python package dependencies
+│   ├── loader.py                   # Loads STL and PLY files
+│   ├── cylinder_fit.py             # Finds and fits cylinders to each scan body
+│   ├── alignment.py                # Aligns cylinder sets between techniques
+│   ├── metrics.py                  # Calculates error measurements
+│   └── reporter.py                 # Writes results to results.xlsx
+├── trial/                          # Trial scan files (27 cases, 3 techniques)
+├── images/                         # Generated charts (created when you run the scripts)
+├── run_all.py                      # Run the full pipeline in one command
+├── main.py                         # Step 4: run measurements → results.xlsx
+├── visualize.py                    # Step 5: generate per-case charts
+├── analyze.py                      # Step 6: statistical analysis
+├── analyze_nexus_gold.py           # Sensitivity analysis: Nexus as gold standard
+└── requirements.txt                # Python package dependencies
 ```

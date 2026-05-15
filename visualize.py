@@ -202,7 +202,8 @@ def _plot_error_bars(ax_ang, ax_trans,
 
 def visualise_case(case: dict, base_dir: pathlib.Path, pdf: PdfPages,
                    color_map: dict[str, str],
-                   case_num: int = 0, n_cases: int = 0):
+                   case_num: int = 0, n_cases: int = 0,
+                   segmentation: str = "components"):
     """
     Run the pipeline for one case and add a page to the PDF.
 
@@ -216,7 +217,7 @@ def visualise_case(case: dict, base_dir: pathlib.Path, pdf: PdfPages,
 
     # Load and process gold standard
     gold_mesh = load_mesh(str(base_dir / case["desktop_scanner"]))
-    gold_cyls = extract_cylinders(gold_mesh, n)
+    gold_cyls = extract_cylinders(gold_mesh, n, strategy=segmentation)
 
     # Align each technique and collect results
     aligned_by_technique: dict[str, list[Cylinder]] = {}
@@ -224,7 +225,7 @@ def visualise_case(case: dict, base_dir: pathlib.Path, pdf: PdfPages,
     for tech_name, rel_path in case["techniques"].items():
         print(f"  [{tech_name}]")
         tech_mesh  = load_mesh(str(base_dir / rel_path))
-        tech_cyls  = extract_cylinders(tech_mesh, n)
+        tech_cyls  = extract_cylinders(tech_mesh, n, strategy=segmentation)
         aligned, *_ = align_cylinders(gold_cyls, tech_cyls)
         aligned_by_technique[tech_name] = aligned
 
@@ -263,6 +264,8 @@ def visualise_case(case: dict, base_dir: pathlib.Path, pdf: PdfPages,
 def main():
     parser = argparse.ArgumentParser(
         description="Generate cylinder visualisations for each case in a config file.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="Example:\n  python visualize.py --config config/trial.yaml",
     )
     parser.add_argument(
         "--config", required=True, metavar="FILE",
@@ -271,6 +274,17 @@ def main():
     parser.add_argument(
         "--outdir", default="images", metavar="DIR",
         help="Directory to write PNG files into (default: images/).",
+    )
+    parser.add_argument(
+        "--segmentation",
+        choices=["components", "kmeans"],
+        default="components",
+        help=(
+            "Cylinder segmentation strategy. "
+            "'components' (default): split mesh on connected-component boundaries, "
+            "falling back to K-means if fewer than N bodies are found. "
+            "'kmeans': always use K-means spatial clustering."
+        ),
     )
     args = parser.parse_args()
 
@@ -300,7 +314,9 @@ def main():
     with PdfPages(pdf_path) as pdf:
         for i, case in enumerate(config["cases"], 1):
             try:
-                visualise_case(case, base_dir, pdf, color_map, case_num=i, n_cases=n_cases)
+                visualise_case(case, base_dir, pdf, color_map,
+                               case_num=i, n_cases=n_cases,
+                               segmentation=args.segmentation)
             except Exception as exc:
                 print(f"ERROR on case '{case.get('name', '?')}': {exc}", file=sys.stderr)
                 sys.exit(1)

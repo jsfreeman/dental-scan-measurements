@@ -295,14 +295,17 @@ def _clusters_from_kmeans(mesh: trimesh.Trimesh, n: int, n_sample: int = 30_000)
 # Public API
 # ---------------------------------------------------------------------------
 
-def extract_cylinders(mesh: trimesh.Trimesh, n: int) -> list[Cylinder]:
+def extract_cylinders(mesh: trimesh.Trimesh, n: int, strategy: str = "components") -> list[Cylinder]:
     """
     Extract N cylinders from a mesh that represents N implant scan bodies.
 
     Parameters
     ----------
-    mesh : the loaded mesh (STL or PLY)
-    n    : number of implants / scan bodies expected in this mesh
+    mesh     : the loaded mesh (STL or PLY)
+    n        : number of implants / scan bodies expected in this mesh
+    strategy : segmentation method — "components" (default) tries connected
+               components and falls back to K-means if fewer than N bodies are
+               found; "kmeans" skips directly to K-means.
 
     Returns
     -------
@@ -311,23 +314,29 @@ def extract_cylinders(mesh: trimesh.Trimesh, n: int) -> list[Cylinder]:
 
     Raises
     ------
-    ValueError  — if n < 1.
+    ValueError  — if n < 1 or strategy is unrecognised.
     RuntimeError — if fewer than n clusters can be extracted.
     """
     if n < 1:
         raise ValueError(f"n_implants must be ≥ 1; got {n}.")
+    if strategy not in ("components", "kmeans"):
+        raise ValueError(f"strategy must be 'components' or 'kmeans'; got {strategy!r}.")
 
     print(f"    Extracting {n} cylinders from mesh ({len(mesh.faces):,} triangles)...")
 
-    # --- Step 1: try connected components (fast path for CAD-exported meshes) ---
-    clusters = _clusters_from_components(mesh, n)
-
-    if clusters is not None:
-        print(f"    Strategy: connected components ({len(clusters)} bodies found).")
-    else:
-        # --- Step 2: fall back to K-means spatial clustering ---
-        print(f"    Fewer than {n} connected components — falling back to K-means.")
+    if strategy == "kmeans":
+        print("    Strategy: K-means (forced).")
         clusters = _clusters_from_kmeans(mesh, n)
+    else:
+        # --- Try connected components (fast path for CAD-exported meshes) ---
+        clusters = _clusters_from_components(mesh, n)
+
+        if clusters is not None:
+            print(f"    Strategy: connected components ({len(clusters)} bodies found).")
+        else:
+            # --- Fall back to K-means spatial clustering ---
+            print(f"    Fewer than {n} connected components — falling back to K-means.")
+            clusters = _clusters_from_kmeans(mesh, n)
 
     # Fit one cylinder per cluster
     cylinders = []

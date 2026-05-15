@@ -13,6 +13,7 @@ Usage:
     python analyze.py
 """
 
+import argparse
 import pathlib
 import sys
 
@@ -112,6 +113,16 @@ def pairwise_wilcoxon(df: pd.DataFrame, metric: str, techniques: list,
 # ---------------------------------------------------------------------------
 
 def analyze():
+    parser = argparse.ArgumentParser(
+        description=(
+            "Run statistical analysis on dental scan accuracy results. "
+            "Reads results.xlsx from the project root and writes images/analysis.png."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="Example:\n  python analyze.py",
+    )
+    parser.parse_args()   # no arguments — parser exists only to provide --help
+
     base = pathlib.Path(__file__).parent
 
     print(f"Loading {RESULTS_XLSX}...")

@@ -42,6 +42,12 @@ def main() -> None:
         "--config", default="config/trial.yaml", metavar="FILE",
         help="Path to the YAML config file (default: config/trial.yaml).",
     )
+    parser.add_argument(
+        "--segmentation",
+        choices=["components", "kmeans"],
+        default="components",
+        help="Cylinder segmentation strategy passed to main.py (default: components).",
+    )
     args = parser.parse_args()
 
     config_path = pathlib.Path(args.config).resolve()
@@ -61,10 +67,12 @@ def main() -> None:
     t0 = time.time()
 
     _step("Step 1/3 — Measure accuracy",
-          [py, "main.py", "--config", args.config], project_root)
+          [py, "main.py", "--config", args.config, "--segmentation", args.segmentation],
+          project_root)
 
     _step("Step 2/3 — Generate visualisations",
-          [py, "visualize.py", "--config", args.config], project_root)
+          [py, "visualize.py", "--config", args.config, "--segmentation", args.segmentation],
+          project_root)
 
     _step("Step 3/3 — Statistical analysis",
           [py, "analyze.py"], project_root)

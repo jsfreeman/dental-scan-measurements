@@ -32,6 +32,7 @@ Each permutation requires one SVD (3×3 matrix) — the full search takes < 1 ms
 even for N=6, so brute force is appropriate here.
 """
 
+import warnings
 from itertools import permutations
 
 import numpy as np
@@ -132,12 +133,14 @@ def align_cylinders(gold: list[Cylinder], tech: list[Cylinder]):
     best_perm = tuple(range(n))
     best_R    = np.eye(3)
     best_t    = np.zeros(3)
+    all_rmses = []
 
     for perm in permutations(range(n)):
         Q = tech_centers[list(perm)]       # reorder tech centres by this permutation
         R, t = _kabsch(gold_centers, Q)
         Q_aligned = Q @ R.T + t
         err = _rmse(gold_centers, Q_aligned)
+        all_rmses.append(err)
 
         if err < best_rmse:
             best_rmse = err
@@ -147,6 +150,23 @@ def align_cylinders(gold: list[Cylinder], tech: list[Cylinder]):
 
     if best_rmse == np.inf:
         raise RuntimeError("Alignment search produced no valid result.")
+
+    # Ambiguity check: if more than one permutation achieves RMSE below the
+    # "good alignment" threshold, the center geometry alone cannot distinguish
+    # between them.  This can occur with symmetric implant layouts (especially
+    # N=2) where a 180°-rotated alignment of the centers is equally valid.
+    # Axis directions cannot break the tie (PCA axis sign is arbitrary), so
+    # the chosen alignment may be wrong and per-implant metrics unreliable.
+    competing = sorted(r for r in all_rmses if r < _RMSE_WARNING_THRESHOLD_MM)
+    if len(competing) > 1:
+        warnings.warn(
+            f"Alignment ambiguity: {len(competing)} permutations achieve RMSE "
+            f"< {_RMSE_WARNING_THRESHOLD_MM} mm (best {best_rmse:.3f} mm, "
+            f"second-best {competing[1]:.3f} mm). The chosen alignment may not "
+            "be unique — per-implant metrics for this case may be unreliable. "
+            "Inter-implant distance errors are unaffected (computed pre-alignment).",
+            stacklevel=2,
+        )
 
 
     # --- Apply the winning transform to axes and centres ---

@@ -139,7 +139,10 @@ def _plot_3d(ax, gold_cyls: list[Cylinder],
     # Set a viewing angle that shows all cylinders well
     ax.view_init(elev=20, azim=-60)
 
-    # Force equal aspect ratio by padding to a cubic bounding box
+    # Matplotlib 3-D axes don't support equal aspect ratio natively. Work around
+    # it by computing the widest span across all axes and applying that same
+    # half-span symmetrically around the centroid on all three axes, making the
+    # viewing volume a cube. The +8 mm padding keeps cylinders from touching edges.
     all_centers = np.array([c.center for c in gold_cyls] +
                            [c.center for cyls in aligned_by_technique.values()
                             for c in cyls])

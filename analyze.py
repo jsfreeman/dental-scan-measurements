@@ -95,6 +95,8 @@ def pairwise_wilcoxon(df: pd.DataFrame, metric: str, techniques: list,
 
     results = []
     for a, b in pairs:
+        # Sort both arrays identically so element i in vals_a and vals_b are
+        # measurements from the same implant — required for a paired test.
         vals_a = df[df["technique"] == a].sort_values(["case", "implant_id"])[metric].values
         vals_b = df[df["technique"] == b].sort_values(["case", "implant_id"])[metric].values
         stat, p = stats.wilcoxon(vals_a, vals_b)
@@ -330,14 +332,19 @@ def analyze():
         fontsize=14, fontweight="bold", y=1.01,
     )
 
+    # Shared box-plot style: white median line stays visible against the
+    # colored fill; we annotate mean (not median) separately beside each box.
+    _box_kw = dict(patch_artist=True, widths=0.5,
+                   medianprops=dict(color="white", linewidth=2))
+
     # 1. Box + strip: angular error
     ax1 = fig.add_subplot(2, 3, 1)
     data_ang = [df[df["technique"] == t]["angular_error_deg"].values for t in techniques]
-    bp = ax1.boxplot(data_ang, patch_artist=True, widths=0.5,
-                     medianprops=dict(color="white", linewidth=2))
+    bp = ax1.boxplot(data_ang, **_box_kw)
     for patch, color in zip(bp["boxes"], colors):
         patch.set_facecolor(color); patch.set_alpha(0.7)
     for i, (vals, color) in enumerate(zip(data_ang, colors), start=1):
+        # Jitter x slightly so overlapping points don't hide each other
         ax1.scatter(np.random.normal(i, 0.06, len(vals)), vals,
                     color=color, zorder=5, s=35, alpha=0.9,
                     edgecolors="white", linewidths=0.5)
@@ -351,8 +358,7 @@ def analyze():
     # 2. Box + strip: translational offset
     ax2 = fig.add_subplot(2, 3, 2)
     data_trans = [df[df["technique"] == t]["translational_offset_mm"].values for t in techniques]
-    bp2 = ax2.boxplot(data_trans, patch_artist=True, widths=0.5,
-                      medianprops=dict(color="white", linewidth=2))
+    bp2 = ax2.boxplot(data_trans, **_box_kw)
     for patch, color in zip(bp2["boxes"], colors):
         patch.set_facecolor(color); patch.set_alpha(0.7)
     for i, (vals, color) in enumerate(zip(data_trans, colors), start=1):
@@ -369,8 +375,7 @@ def analyze():
     # 3. Box + strip: inter-implant distance error
     ax3 = fig.add_subplot(2, 3, 3)
     data_inter = [df_i[df_i["technique"] == t]["dist_error_mm"].values for t in techniques]
-    bp3 = ax3.boxplot(data_inter, patch_artist=True, widths=0.5,
-                      medianprops=dict(color="white", linewidth=2))
+    bp3 = ax3.boxplot(data_inter, **_box_kw)
     for patch, color in zip(bp3["boxes"], colors):
         patch.set_facecolor(color); patch.set_alpha(0.7)
     for i, (vals, color) in enumerate(zip(data_inter, colors), start=1):
@@ -412,6 +417,7 @@ def analyze():
                  for c in cases]
         ax5.bar(x + i * bar_w, means, bar_w, color=color,
                 label=technique_labels[tech], alpha=0.8)
+    # Centre tick marks under each group of bars: offset by half the total group width
     ax5.set_xticks(x + bar_w * (n_tech - 1) / 2); ax5.set_xticklabels([f"Case {c}" for c in cases], fontsize=9)
     ax5.set_ylabel("Mean Angular Error (deg)", fontsize=9)
     ax5.set_title("Angular Error by Case", fontsize=10, fontweight="bold")
@@ -424,7 +430,7 @@ def analyze():
                  for c in cases]
         ax6.bar(x + i * bar_w, means, bar_w, color=color,
                 label=technique_labels[tech], alpha=0.8)
-    ax6.set_xticks(x + bar_w * (n_tech - 1) / 2); ax6.set_xticklabels([f"Case {c}" for c in cases], fontsize=9)
+    ax6.set_xticks(x + bar_w * (n_tech - 1) / 2); ax6.set_xticklabels([f"Case {c}" for c in cases], fontsize=9)  # same centering
     ax6.set_ylabel("Mean Translational Offset (mm)", fontsize=9)
     ax6.set_title("Translational Offset by Case", fontsize=10, fontweight="bold")
     ax6.legend(fontsize=7); ax6.yaxis.grid(True, linestyle="--", alpha=0.4); ax6.set_axisbelow(True)

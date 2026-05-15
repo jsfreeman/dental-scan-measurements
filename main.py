@@ -172,6 +172,9 @@ def process_case(case: dict, base_dir: pathlib.Path, segmentation: str = "compon
                 #                   < 0.1 mm = excellent, > 0.5 mm = poor
                 # elongation_ratio: PCA eigenvalue ratio λ1/(λ2+λ3)
                 #                   > 5 = strongly cylindrical (confident axis), < 2 = weak
+                # Fit quality lives on the original cylinders (aligned_tech only
+                # carries center/axis/radius). perm[i] maps gold index i back to
+                # the original position in tech_cyls_original.
                 "tech_fit_rmse_mm":      round(float(tech_cyls_original[perm[i]].fit_rmse_mm), 4),
                 "tech_elongation_ratio": round(float(tech_cyls_original[perm[i]].elongation_ratio), 2),
                 "gold_fit_rmse_mm":      round(float(gold_c.fit_rmse_mm), 4),

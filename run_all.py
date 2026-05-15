@@ -13,6 +13,7 @@ Usage:
 
 import argparse
 import datetime
+import os
 import pathlib
 import subprocess
 import sys
@@ -30,9 +31,15 @@ def _step(label: str, cmd: list, project_root: pathlib.Path, log,
     log.write(f"\n[{datetime.datetime.now():%Y-%m-%d %H:%M:%S}]  {label}\n{'=' * width}\n")
     log.flush()
 
+    # PYTHONUNBUFFERED=1 stops Python's automatic switch to block-buffered mode
+    # when stdout is a pipe rather than a terminal.  Without it the subprocess
+    # accumulates output internally and only flushes when its buffer fills or
+    # the process exits, making output appear to "dump" all at once.
+    env = {**os.environ, "PYTHONUNBUFFERED": "1"}
     proc = subprocess.Popen(
         cmd, cwd=project_root,
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+        env=env,
     )
     for raw in iter(proc.stdout.readline, b""):
         line = raw.decode("utf-8", errors="replace")

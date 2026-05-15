@@ -12,9 +12,9 @@ output_interimplant_csv: results_interimplant.csv
 #   1.693 MB = 7 implants  |  1.935 MB = 8
 #
 # s9_md:  TRIOS alignment RMSE 1.6 mm — check n_implants and file pairing
-# s20:    Nexus file missing — TRIOS + Shinning only
-# s21:    Shinning file missing — TRIOS + Nexus only
-# s6_md:  Shinning file missing — TRIOS + Nexus only
+# s20:    Nexus file missing
+# s21:    Shinning file missing
+# s6_md:  Shinning file missing
 
 cases:
   - name: "s1"
@@ -65,12 +65,12 @@ cases:
       Nexus:    "trial/Nexus/s5-CM 77311 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s5-CM77311 S.stl"
 
-  - name: "s6_md"
-    n_implants: 5
-    desktop_scanner: "trial/Desktop Scanner/s6- DA 64128 md.stl"
-    techniques:
-      TRIOS:    "trial/Intraoral Scanner (TRIOS)/s6- DA 64128 md.stl"
-      Nexus:    "trial/Nexus/s6-DA 64128 md N.stl"
+  # - name: "s6_md"    # Shinning file missing
+  #   n_implants: 5
+  #   desktop_scanner: "trial/Desktop Scanner/s6- DA 64128 md.stl"
+  #   techniques:
+  #     TRIOS:    "trial/Intraoral Scanner (TRIOS)/s6- DA 64128 md.stl"
+  #     Nexus:    "trial/Nexus/s6-DA 64128 md N.stl"
 
   - name: "s6_mx"
     n_implants: 6
@@ -192,19 +192,19 @@ cases:
       Nexus:    "trial/Nexus/s19-PM 194333 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s19-PM194333.stl"
 
-  - name: "s20"
-    n_implants: 4
-    desktop_scanner: "trial/Desktop Scanner/s20- RO 64131.stl"
-    techniques:
-      TRIOS:    "trial/Intraoral Scanner (TRIOS)/s20- RO 64131.stl"
-      Shinning: "trial/Intraoral Photogrammetry (Shinning)/s20-RO64131 S.stl"
+  # - name: "s20"    # Nexus file missing
+  #   n_implants: 4
+  #   desktop_scanner: "trial/Desktop Scanner/s20- RO 64131.stl"
+  #   techniques:
+  #     TRIOS:    "trial/Intraoral Scanner (TRIOS)/s20- RO 64131.stl"
+  #     Shinning: "trial/Intraoral Photogrammetry (Shinning)/s20-RO64131 S.stl"
 
-  - name: "s21"
-    n_implants: 6
-    desktop_scanner: "trial/Desktop Scanner/s21- SA 57947.stl"
-    techniques:
-      TRIOS:    "trial/Intraoral Scanner (TRIOS)/s21- SA 57947.stl"
-      Nexus:    "trial/Nexus/s21-SA 57947 N.stl"
+  # - name: "s21"    # Shinning file missing
+  #   n_implants: 6
+  #   desktop_scanner: "trial/Desktop Scanner/s21- SA 57947.stl"
+  #   techniques:
+  #     TRIOS:    "trial/Intraoral Scanner (TRIOS)/s21- SA 57947.stl"
+  #     Nexus:    "trial/Nexus/s21-SA 57947 N.stl"
 
   - name: "s22"
     n_implants: 6

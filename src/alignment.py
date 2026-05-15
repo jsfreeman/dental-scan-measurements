@@ -151,14 +151,15 @@ def align_cylinders(gold: list[Cylinder], tech: list[Cylinder]):
     if best_rmse == np.inf:
         raise RuntimeError("Alignment search produced no valid result.")
 
-    # Ambiguity check: if more than one permutation achieves RMSE below the
-    # "good alignment" threshold, the center geometry alone cannot distinguish
-    # between them.  This can occur with symmetric implant layouts (especially
-    # N=2) where a 180°-rotated alignment of the centers is equally valid.
+    # Ambiguity check: if a second permutation achieves RMSE below the
+    # "good alignment" threshold AND is within 50% of the best RMSE, the
+    # center geometry alone cannot reliably distinguish between them.  This
+    # can occur with symmetric implant layouts (especially N=2) where a
+    # 180°-rotated alignment of the centers is nearly equally valid.
     # Axis directions cannot break the tie (PCA axis sign is arbitrary), so
     # the chosen alignment may be wrong and per-implant metrics unreliable.
     competing = sorted(r for r in all_rmses if r < _RMSE_WARNING_THRESHOLD_MM)
-    if len(competing) > 1:
+    if len(competing) > 1 and competing[1] <= best_rmse * 1.5:
         warnings.warn(
             f"Alignment ambiguity: {len(competing)} permutations achieve RMSE "
             f"< {_RMSE_WARNING_THRESHOLD_MM} mm (best {best_rmse:.3f} mm, "

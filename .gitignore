@@ -13,3 +13,6 @@ tmp_output.txt
 
 # Notes
 notes/
+
+# Pipeline logs
+logs/

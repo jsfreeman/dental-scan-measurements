@@ -11,9 +11,10 @@ output_interimplant_csv: results_interimplant.csv
 #   0.967 MB = 4 implants  |  1.209 MB = 5  |  1.451 MB = 6
 #   1.693 MB = 7 implants  |  1.935 MB = 8
 #
-# s20: Nexus file missing — only TRIOS + Shinning compared.
-# s21: Shinning file missing — only TRIOS + Nexus compared.
-# s6_md: Shinning file missing — only TRIOS + Nexus compared.
+# s9_md:  TRIOS alignment RMSE 1.6 mm — check n_implants and file pairing
+# s20:    Nexus file missing — TRIOS + Shinning only
+# s21:    Shinning file missing — TRIOS + Nexus only
+# s6_md:  Shinning file missing — TRIOS + Nexus only
 
 cases:
   - name: "s1"
@@ -21,7 +22,7 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s1-86846.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s1-86846.stl"
-      Nexus:    "trial/Nexus/s1-86846 N.ply"
+      Nexus:    "trial/Nexus/s1-86846 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s1-86846 S.stl"
 
   - name: "s2"
@@ -29,7 +30,7 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s2-104663.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s2-104663.stl"
-      Nexus:    "trial/Nexus/s2-104663 N.ply"
+      Nexus:    "trial/Nexus/s2-104663.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s2-104663 S.stl"
 
   - name: "s3"
@@ -37,7 +38,7 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s3-118592.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s3-118592.stl"
-      Nexus:    "trial/Nexus/s3-118592 N.ply"
+      Nexus:    "trial/Nexus/s3-118592 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s3-118592 S.stl"
 
   - name: "s4_md"
@@ -45,7 +46,7 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s4 BF 204662 md.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s4 BF 204662 md.stl"
-      Nexus:    "trial/Nexus/s4-BF 204662 md N.ply"
+      Nexus:    "trial/Nexus/s4-BF 204662 md N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s4-BF204662 md S.stl"
 
   - name: "s4_mx"
@@ -53,7 +54,7 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s4- BF204662 mx.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s4- BF204662 mx.stl"
-      Nexus:    "trial/Nexus/s4-BF 204662 mx N.ply"
+      Nexus:    "trial/Nexus/s4-BF 204662 mx N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s4-BF204662 mx S.stl"
 
   - name: "s5"
@@ -61,22 +62,22 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s5-CM 77311.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s5-CM 77311.stl"
-      Nexus:    "trial/Nexus/s5-CM 77311 N.ply"
+      Nexus:    "trial/Nexus/s5-CM 77311 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s5-CM77311 S.stl"
 
-  # - name: "s6_md"    # Shinning file missing
-  #   n_implants: 5
-  #   desktop_scanner: "trial/Desktop Scanner/s6- DA 64128 md.stl"
-  #   techniques:
-  #     TRIOS:    "trial/Intraoral Scanner (TRIOS)/s6- DA 64128 md.stl"
-  #     Nexus:    "trial/Nexus/s6-DA 64128 md N.ply"
+  - name: "s6_md"
+    n_implants: 5
+    desktop_scanner: "trial/Desktop Scanner/s6- DA 64128 md.stl"
+    techniques:
+      TRIOS:    "trial/Intraoral Scanner (TRIOS)/s6- DA 64128 md.stl"
+      Nexus:    "trial/Nexus/s6-DA 64128 md N.stl"
 
   - name: "s6_mx"
     n_implants: 6
     desktop_scanner: "trial/Desktop Scanner/s6- DA 64128 Mx.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s6- DA 64128 Mx.stl"
-      Nexus:    "trial/Nexus/s6-DA 64128 mx N.ply"
+      Nexus:    "trial/Nexus/s6-DA 64128 mx N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s6-DA64128 mx S.stl"
 
   - name: "s7"
@@ -84,7 +85,7 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s7-GF 151384.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s7-GF 151384.stl"
-      Nexus:    "trial/Nexus/s7-GF 151384 N.ply"
+      Nexus:    "trial/Nexus/s7-GF 151384 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s7-GF151384 S.stl"
 
   - name: "s8"
@@ -92,7 +93,7 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s8- GJ 96349.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s8- GJ 96349.stl"
-      Nexus:    "trial/Nexus/s8-GJ 96349 N.ply"
+      Nexus:    "trial/Nexus/s8-GJ 96349 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s8-GJ96349 S.stl"
 
   # - name: "s9_md"    # TRIOS alignment RMSE 1.6 mm — check n_implants and file pairing
@@ -100,7 +101,7 @@ cases:
   #   desktop_scanner: "trial/Desktop Scanner/s9- HM 192261 md.stl"
   #   techniques:
   #     TRIOS:    "trial/Intraoral Scanner (TRIOS)/s9- HM 192261 md.stl"
-  #     Nexus:    "trial/Nexus/s9-HM 192261 md N.ply"
+  #     Nexus:    "trial/Nexus/s9-HM 192261 md N.stl"
   #     Shinning: "trial/Intraoral Photogrammetry (Shinning)/s9-HM19226 md S.stl"
 
   - name: "s9_mx"
@@ -108,7 +109,7 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s9- HM 192261 Mx.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s9- HM 192261 Mx.stl"
-      Nexus:    "trial/Nexus/s9-HM 192261 mx N.ply"
+      Nexus:    "trial/Nexus/s9-HM 192261 mx N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s9-HM19226 mx S.stl"
 
   - name: "s10"
@@ -116,7 +117,7 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s10- KB173368.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s10- KB173368.stl"
-      Nexus:    "trial/Nexus/s10-KB 173368 N.ply"
+      Nexus:    "trial/Nexus/s10-KB 173368 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s10-KB173368 S.stl"
 
   - name: "s11"
@@ -124,7 +125,7 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s11- KJ94423.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s11- KJ94423.stl"
-      Nexus:    "trial/Nexus/s11-KJ 94423 N.ply"
+      Nexus:    "trial/Nexus/s11-KJ 94423 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s11- kj94423 S.stl"
 
   - name: "s12"
@@ -132,23 +133,23 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s12-KL 98363.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s12-KL 98363.stl"
-      Nexus:    "trial/Nexus/s12-KL 98363 N.ply"
+      Nexus:    "trial/Nexus/s12-KL 98363 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s12-kl98363 S.stl"
 
-  # - name: "s13"    # Shinning alignment RMSE 6.2 mm — check n_implants and file pairing
-  #   n_implants: 4
-  #   desktop_scanner: "trial/Desktop Scanner/s13- KR200983.stl"
-  #   techniques:
-  #     TRIOS:    "trial/Intraoral Scanner (TRIOS)/s13- KR200983.stl"
-  #     Nexus:    "trial/Nexus/s13-KR 200983 N.ply"
-  #     Shinning: "trial/Intraoral Photogrammetry (Shinning)/s13-KR200983 S.stl"
+  - name: "s13"
+    n_implants: 4
+    desktop_scanner: "trial/Desktop Scanner/s13- KR200983.stl"
+    techniques:
+      TRIOS:    "trial/Intraoral Scanner (TRIOS)/s13- KR200983.stl"
+      Nexus:    "trial/Nexus/s13-KR 200983 N.stl"
+      Shinning: "trial/Intraoral Photogrammetry (Shinning)/s13-KR200983 S.stl"
 
   - name: "s14"
     n_implants: 7
     desktop_scanner: "trial/Desktop Scanner/s14- MA178073.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s14- MA178073.stl"
-      Nexus:    "trial/Nexus/s14-MA 178073 N.ply"
+      Nexus:    "trial/Nexus/s14-MA 178073 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s14-MA17872 S.stl"
 
   - name: "s15"
@@ -156,23 +157,23 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s15- MN37147.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s15- MN37147.stl"
-      Nexus:    "trial/Nexus/s15-MN 37147 N.ply"
+      Nexus:    "trial/Nexus/s15-MN 37147 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s15-37147 S.stl"
 
-  # - name: "s16"    # Shinning alignment RMSE 4.9 mm — check n_implants and file pairing
-  #   n_implants: 4
-  #   desktop_scanner: "trial/Desktop Scanner/s16- MRC116516.stl"
-  #   techniques:
-  #     TRIOS:    "trial/Intraoral Scanner (TRIOS)/s16- MRC116516.stl"
-  #     Nexus:    "trial/Nexus/s16-MRC 116516 N.ply"
-  #     Shinning: "trial/Intraoral Photogrammetry (Shinning)/s16-116616 S.stl"
+  - name: "s16"
+    n_implants: 4
+    desktop_scanner: "trial/Desktop Scanner/s16- MRC116516.stl"
+    techniques:
+      TRIOS:    "trial/Intraoral Scanner (TRIOS)/s16- MRC116516.stl"
+      Nexus:    "trial/Nexus/s16-MRC 116516 N.stl"
+      Shinning: "trial/Intraoral Photogrammetry (Shinning)/s16-116616 S.stl"
 
   - name: "s17"
     n_implants: 4
     desktop_scanner: "trial/Desktop Scanner/s17- NS 207260.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s17- NS 207260.stl"
-      Nexus:    "trial/Nexus/s17-NS 207260 N.ply"
+      Nexus:    "trial/Nexus/s17-NS 207260 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s17-NS207260 S.stl"
 
   - name: "s18"
@@ -180,7 +181,7 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s18- NY70413.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s18- NY70413.stl"
-      Nexus:    "trial/Nexus/s18-NY 70413 N.ply"
+      Nexus:    "trial/Nexus/s18-NY 70413 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s18-70413 S.stl"
 
   - name: "s19"
@@ -188,29 +189,29 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s19- PM194333.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s19- PM194333.stl"
-      Nexus:    "trial/Nexus/s19-PM 194333 N.ply"
+      Nexus:    "trial/Nexus/s19-PM 194333 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s19-PM194333.stl"
 
-  # - name: "s20"    # Nexus file missing
-  #   n_implants: 4
-  #   desktop_scanner: "trial/Desktop Scanner/s20- RO 64131.stl"
-  #   techniques:
-  #     TRIOS:    "trial/Intraoral Scanner (TRIOS)/s20- RO 64131.stl"
-  #     Shinning: "trial/Intraoral Photogrammetry (Shinning)/s20-RO64131 S.stl"
+  - name: "s20"
+    n_implants: 4
+    desktop_scanner: "trial/Desktop Scanner/s20- RO 64131.stl"
+    techniques:
+      TRIOS:    "trial/Intraoral Scanner (TRIOS)/s20- RO 64131.stl"
+      Shinning: "trial/Intraoral Photogrammetry (Shinning)/s20-RO64131 S.stl"
 
-  # - name: "s21"    # Shinning file missing
-  #   n_implants: 6
-  #   desktop_scanner: "trial/Desktop Scanner/s21- SA 57947.stl"
-  #   techniques:
-  #     TRIOS:    "trial/Intraoral Scanner (TRIOS)/s21- SA 57947.stl"
-  #     Nexus:    "trial/Nexus/s21-SA 57947 N.ply"
+  - name: "s21"
+    n_implants: 6
+    desktop_scanner: "trial/Desktop Scanner/s21- SA 57947.stl"
+    techniques:
+      TRIOS:    "trial/Intraoral Scanner (TRIOS)/s21- SA 57947.stl"
+      Nexus:    "trial/Nexus/s21-SA 57947 N.stl"
 
   - name: "s22"
     n_implants: 6
     desktop_scanner: "trial/Desktop Scanner/s22- SA 81735.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s22- SA 81735.stl"
-      Nexus:    "trial/Nexus/s22-SA 81735 N.ply"
+      Nexus:    "trial/Nexus/s22-SA 81735 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s22-SA81735 S.stl"
 
   - name: "s23"
@@ -218,7 +219,7 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s23- SS 208305.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s23- SS 208305.stl"
-      Nexus:    "trial/Nexus/s23-SS 208305 N.ply"
+      Nexus:    "trial/Nexus/s23-SS 208305 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s23-SS208305 S.stl"
 
   - name: "s24"
@@ -226,7 +227,7 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s24- TR64910.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s24- TR64910.stl"
-      Nexus:    "trial/Nexus/s24-TR 64910 N.ply"
+      Nexus:    "trial/Nexus/s24-TR 64910 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s24-TR64910 S.stl"
 
   - name: "s25"
@@ -234,7 +235,7 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s25- VJ 104968.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s25- VJ 104968.stl"
-      Nexus:    "trial/Nexus/s25-VJ 104968 N.ply"
+      Nexus:    "trial/Nexus/s25-VJ 104968 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s25-VJ 1049 S.stl"
 
   - name: "s26"
@@ -242,7 +243,7 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s26-xxxxx.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s26-xxxxx.stl"
-      Nexus:    "trial/Nexus/s26-XXXXX N.ply"
+      Nexus:    "trial/Nexus/s26-XXXXX N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s26-XXXXX S.stl"
 
   - name: "s27"
@@ -250,5 +251,5 @@ cases:
     desktop_scanner: "trial/Desktop Scanner/s27- YJ 205798.stl"
     techniques:
       TRIOS:    "trial/Intraoral Scanner (TRIOS)/s27- YJ 205798.stl"
-      Nexus:    "trial/Nexus/s27-YJ 205798 N.ply"
+      Nexus:    "trial/Nexus/s27-YJ 205798 N.stl"
       Shinning: "trial/Intraoral Photogrammetry (Shinning)/s27-JY205798 S.stl"

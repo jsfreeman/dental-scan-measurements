@@ -107,7 +107,7 @@ def main() -> None:
               project_root, log, counts)
 
         _step("Step 2/3 — Generate visualisations",
-              [py, "visualize.py", "--config", args.config, "--segmentation", args.segmentation],
+              [py, "visualize.py", "--config", args.config],
               project_root, log, counts)
 
         _step("Step 3/3 — Statistical analysis",

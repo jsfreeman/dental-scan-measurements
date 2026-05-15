@@ -23,9 +23,9 @@ from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 import yaml
 
-from src.loader import load_mesh
-from src.cylinder_fit import extract_cylinders, Cylinder
-from src.alignment import align_cylinders
+import pandas as pd
+
+from src.cylinder_fit import Cylinder
 from src.metrics import angular_error, translational_offset
 
 
@@ -200,12 +200,52 @@ def _plot_error_bars(ax_ang, ax_trans,
 # Per-case visualisation
 # ---------------------------------------------------------------------------
 
-def visualise_case(case: dict, base_dir: pathlib.Path, pdf: PdfPages,
-                   color_map: dict[str, str],
-                   case_num: int = 0, n_cases: int = 0,
-                   segmentation: str = "components"):
+def _load_cylinders_from_xlsx(
+        xlsx_path: pathlib.Path, case_name: str,
+) -> tuple[list[Cylinder], dict[str, list[Cylinder]]]:
     """
-    Run the pipeline for one case and add a page to the PDF.
+    Reconstruct gold and aligned technique cylinders for one case from
+    the Per Implant sheet of results.xlsx (written by main.py).
+    All cylinder data is already in the gold coordinate frame.
+    """
+    df = pd.read_excel(xlsx_path, sheet_name="Per Implant")
+    case_df = df[df["case"] == case_name].sort_values("implant_id")
+    if case_df.empty:
+        raise ValueError(f"No results found for case '{case_name}' in {xlsx_path}. "
+                         "Run main.py first.")
+
+    # Gold cylinders are identical across techniques; take from any one
+    ref_tech = case_df["technique"].iloc[0]
+    gold_rows = case_df[case_df["technique"] == ref_tech]
+    gold_cyls = [
+        Cylinder(
+            center=np.array([r.gold_center_x, r.gold_center_y, r.gold_center_z]),
+            axis=np.array([r.gold_axis_x,   r.gold_axis_y,   r.gold_axis_z]),
+            radius=float(r.gold_radius_mm),
+        )
+        for _, r in gold_rows.iterrows()
+    ]
+
+    aligned_by_technique: dict[str, list[Cylinder]] = {}
+    for tech_name in sorted(case_df["technique"].unique()):
+        tech_rows = case_df[case_df["technique"] == tech_name]
+        aligned_by_technique[tech_name] = [
+            Cylinder(
+                center=np.array([r.tech_center_x, r.tech_center_y, r.tech_center_z]),
+                axis=np.array([r.tech_axis_x,   r.tech_axis_y,   r.tech_axis_z]),
+                radius=float(r.tech_radius_mm),
+            )
+            for _, r in tech_rows.iterrows()
+        ]
+
+    return gold_cyls, aligned_by_technique
+
+
+def visualise_case(case: dict, xlsx_path: pathlib.Path, pdf: PdfPages,
+                   color_map: dict[str, str],
+                   case_num: int = 0, n_cases: int = 0):
+    """
+    Load pre-computed cylinder data for one case and add a page to the PDF.
 
     Layout:
       [3-D cylinder view] | [angular error chart] | [translational offset chart]
@@ -215,19 +255,7 @@ def visualise_case(case: dict, base_dir: pathlib.Path, pdf: PdfPages,
     prefix = f"[Case {case_num}/{n_cases}] " if case_num else ""
     print(f"\n{prefix}{name}  ({n} implants)")
 
-    # Load and process gold standard
-    gold_mesh = load_mesh(str(base_dir / case["desktop_scanner"]))
-    gold_cyls = extract_cylinders(gold_mesh, n, strategy=segmentation)
-
-    # Align each technique and collect results
-    aligned_by_technique: dict[str, list[Cylinder]] = {}
-
-    for tech_name, rel_path in case["techniques"].items():
-        print(f"  [{tech_name}]")
-        tech_mesh  = load_mesh(str(base_dir / rel_path))
-        tech_cyls  = extract_cylinders(tech_mesh, n, strategy=segmentation)
-        aligned, *_ = align_cylinders(gold_cyls, tech_cyls)
-        aligned_by_technique[tech_name] = aligned
+    gold_cyls, aligned_by_technique = _load_cylinders_from_xlsx(xlsx_path, name)
 
     # --- Build figure ---
     fig = plt.figure(figsize=(18, 6))
@@ -275,17 +303,6 @@ def main():
         "--outdir", default="images", metavar="DIR",
         help="Directory to write PNG files into (default: images/).",
     )
-    parser.add_argument(
-        "--segmentation",
-        choices=["components", "kmeans"],
-        default="components",
-        help=(
-            "Cylinder segmentation strategy. "
-            "'components' (default): split mesh on connected-component boundaries, "
-            "falling back to K-means if fewer than N bodies are found. "
-            "'kmeans': always use K-means spatial clustering."
-        ),
-    )
     args = parser.parse_args()
 
     config_path = pathlib.Path(args.config).resolve()
@@ -294,7 +311,13 @@ def main():
         sys.exit(1)
 
     base_dir = config_path.parent.parent
-    outdir   = base_dir / args.outdir
+    xlsx_path = base_dir / "results.xlsx"
+    if not xlsx_path.exists():
+        print(f"ERROR: results.xlsx not found at {xlsx_path}. Run main.py first.",
+              file=sys.stderr)
+        sys.exit(1)
+
+    outdir = base_dir / args.outdir
     outdir.mkdir(exist_ok=True)
 
     with open(config_path) as f:
@@ -314,9 +337,8 @@ def main():
     with PdfPages(pdf_path) as pdf:
         for i, case in enumerate(config["cases"], 1):
             try:
-                visualise_case(case, base_dir, pdf, color_map,
-                               case_num=i, n_cases=n_cases,
-                               segmentation=args.segmentation)
+                visualise_case(case, xlsx_path, pdf, color_map,
+                               case_num=i, n_cases=n_cases)
             except Exception as exc:
                 print(f"ERROR on case '{case.get('name', '?')}': {exc}", file=sys.stderr)
                 sys.exit(1)
